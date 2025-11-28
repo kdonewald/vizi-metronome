@@ -1,280 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Vizi Metronome</title>
 
-<!-- IMPORTANT: Disable zoom & scaling -->
-<meta name="viewport"
-      content="width=device-width,
-               initial-scale=1.0,
-               maximum-scale=1.0,
-               user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <style>
-/* ===== GLOBAL ANTI-ZOOM / ANTI-SELECTION ===== */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  touch-action: manipulation;
-  overscroll-behavior: none;
-  -webkit-text-size-adjust: 100%;
-}
-
-* {
-  user-select: none;
-}
-
-/* ===== THEME ===== */
 body {
-  background: #5a3e2b;   /* brown */
-  color: #fff3e6;
-  font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  margin:0;
+  font-family:Arial;
+  background:#5a3e2b;
+  color:#fff3e6;
+  text-align:center;
+  user-select:none;
 }
-
-/* ===== PANEL ===== */
-.panel {
-  background: #6b4a34;
-  padding: 20px;
-  border-radius: 14px;
-  width: 90%;
-  max-width: 420px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-  text-align: center;
+.container {
+  padding:10px;
 }
-
-/* ===== UI ===== */
 h1 {
-  margin: 0 0 12px;
-  font-size: 1.4rem;
+  font-size:1.2rem;
+  margin:8px 0;
 }
-
-label {
-  display: block;
-  text-align: left;
-  margin-top: 14px;
-  font-size: 0.9rem;
+select, input[type=range] {
+  width:100%;
+  margin:8px 0;
 }
-
-select, input[type="range"] {
-  width: 100%;
-  margin-top: 6px;
+#circle {
+  width:70px;
+  height:70px;
+  margin:15px auto;
+  border-radius:50%;
+  background:#3f2a1f;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.4rem;
 }
-
-.bpm-display {
-  margin-top: 6px;
-  font-size: 1.1rem;
-}
-
-.beat-circle {
-  margin: 18px auto;
-  width: 85px;
-  height: 85px;
-  border-radius: 50%;
-  background: #3f2a1f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  transition: background 0.08s ease, transform 0.08s ease;
-}
-
-.accent {
-  background: #d97706;
-  transform: scale(1.12);
-}
-
-.normal {
-  background: #a16207;
-  transform: scale(1.05);
-}
-
-.controls {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 10px;
-}
-
+.accent { background:#d97706; }
+.normal { background:#a16207; }
 button {
-  border: none;
-  padding: 10px 22px;
-  font-size: 0.9rem;
-  border-radius: 999px;
-  cursor: pointer;
-  color: #2e1f15;
-  background: #fbbf24;
+  padding:8px 18px;
+  margin:5px;
+  border:none;
+  border-radius:18px;
+  background:#fbbf24;
+  color:#2e1f15;
+  font-size:0.9rem;
 }
-
-button.stop {
-  background: #ef4444;
-  color: white;
-}
-
-button:active {
-  transform: translateY(1px);
-}
-
-.small {
-  margin-top: 10px;
-  font-size: 0.8rem;
-  opacity: 0.85;
-}
+.stop { background:#ef4444; color:#fff; }
 </style>
 </head>
 
 <body>
-
-<div class="panel">
+<div class="container">
   <h1>Vizi Metronome</h1>
 
-  <label>
-    Time Signature
-    <select id="timeSig">
-      <option value="4">4 / 4 (most songs)</option>
-      <option value="3">3 / 4</option>
-      <option value="2">2 / 4</option>
-      <option value="6">6 / 8</option>
-      <option value="5">5 / 4</option>
-    </select>
-  </label>
+  <select id="ts">
+    <option value="4">4 / 4</option>
+    <option value="3">3 / 4</option>
+    <option value="2">2 / 4</option>
+    <option value="6">6 / 8</option>
+    <option value="5">5 / 4</option>
+  </select>
 
-  <label>
-    Tempo (BPM)
-    <input id="bpmSlider" type="range" min="40" max="200" value="80">
-    <div class="bpm-display"><span id="bpmValue">80</span> BPM</div>
-  </label>
+  <input id="bpm" type="range" min="40" max="200" value="80">
+  <div><span id="bpmVal">80</span> BPM</div>
 
-  <div id="beatCircle" class="beat-circle">1</div>
+  <div id="circle">1</div>
 
-  <div class="controls">
-    <button onclick="startMetronome()">Start</button>
-    <button class="stop" onclick="stopMetronome()">Stop</button>
-  </div>
-
-  <div class="small">
-    Tip: Start slow and lock your strumming to the click.
-  </div>
+  <button onclick="startM()">Start</button>
+  <button class="stop" onclick="stopM()">Stop</button>
 </div>
 
 <script>
-/* ===== STATE ===== */
-let audioCtx = null;
-let timerId = null;
-let isRunning = false;
-let bpm = 80;
-let beatsPerMeasure = 4;
-let currentBeat = 0;
+let ctx=null, timer=null, run=false;
+let bpm=80, beats=4, beat=0;
 
-const bpmSlider  = document.getElementById("bpmSlider");
-const bpmValue   = document.getElementById("bpmValue");
-const timeSig    = document.getElementById("timeSig");
-const beatCircle = document.getElementById("beatCircle");
+const bpmSlider=document.getElementById("bpm");
+const bpmVal=document.getElementById("bpmVal");
+const ts=document.getElementById("ts");
+const circle=document.getElementById("circle");
 
-/* ===== UI EVENTS ===== */
-bpmSlider.addEventListener("input", () => {
-  bpm = parseInt(bpmSlider.value, 10);
-  bpmValue.textContent = bpm;
-  if (isRunning) restartMetronome();
-});
+bpmSlider.oninput=()=>{ bpm=bpmSlider.value; bpmVal.textContent=bpm; if(run) restart(); };
+ts.onchange=()=>{ beats=ts.value; beat=0; if(run) restart(); };
 
-timeSig.addEventListener("change", () => {
-  beatsPerMeasure = parseInt(timeSig.value, 10);
-  currentBeat = 0;
-  if (isRunning) restartMetronome();
-});
-
-/* ===== AUDIO ===== */
-function createAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
+function clickSound(accent){
+  if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); }
+  const o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime;
+  o.frequency.value=accent?1000:700;
+  g.gain.setValueAtTime(accent?0.8:0.5,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t+0.07);
 }
 
-function playClick(isAccent) {
-  createAudioContext();
-  if (!audioCtx) return;
-
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  const now = audioCtx.currentTime;
-
-  osc.frequency.value = isAccent ? 1000 : 700;
-  gain.gain.setValueAtTime(isAccent ? 0.8 : 0.5, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(now);
-  osc.stop(now + 0.07);
+function vis(accent){
+  circle.textContent=beat+1;
+  circle.className="";
+  circle.classList.add(accent?"accent":"normal");
+  setTimeout(()=>circle.className="",80);
 }
 
-/* ===== VISUAL ===== */
-function updateVisual(isAccent) {
-  beatCircle.textContent = currentBeat + 1;
-  beatCircle.classList.remove("accent", "normal");
-  beatCircle.classList.add(isAccent ? "accent" : "normal");
-
-  setTimeout(() => {
-    beatCircle.classList.remove("accent", "normal");
-  }, 90);
+function loop(){
+  const ms=60000/bpm;
+  timer=setInterval(()=>{
+    beat=(beat+1)%beats;
+    const accent=beat===0;
+    clickSound(accent);
+    vis(accent);
+  },ms);
 }
 
-/* ===== METRONOME CORE ===== */
-function scheduleNextBeat() {
-  const intervalMs = 60000 / bpm;
-  timerId = setInterval(() => {
-    currentBeat = (currentBeat + 1) % beatsPerMeasure;
-    const isAccent = (currentBeat === 0);
-    playClick(isAccent);
-    updateVisual(isAccent);
-  }, intervalMs);
+function startM(){
+  if(run) return;
+  run=true; beat=-1;
+  loop();
 }
 
-function startMetronome() {
-  if (isRunning) return;
-  isRunning = true;
-  currentBeat = -1;
-  scheduleNextBeat();
+function stopM(){
+  run=false;
+  if(timer){ clearInterval(timer); timer=null; }
+  if(ctx){ ctx.close(); ctx=null; }
+  beat=0; circle.textContent="1"; circle.className="";
 }
 
-function stopMetronome() {
-  isRunning = false;
+function restart(){ stopM(); startM(); }
 
-  if (timerId !== null) {
-    clearInterval(timerId);
-    timerId = null;
-  }
-
-  if (audioCtx) {
-    audioCtx.close();
-    audioCtx = null;
-  }
-
-  currentBeat = 0;
-  beatCircle.textContent = "1";
-  beatCircle.classList.remove("accent", "normal");
-}
-
-function restartMetronome() {
-  stopMetronome();
-  startMetronome();
-}
-
-/* ===== EXPOSE TO MIT APP INVENTOR ===== */
-window.forceStartMetronome = startMetronome;
-window.forceStopMetronome  = stopMetronome;
-window.setBPM = function(val) {
-  bpm = parseInt(val, 10);
-  bpmSlider.value = bpm;
-  bpmValue.textContent = bpm;
-  if (isRunning) restartMetronome();
+/* Accessible to MIT App */
+window.forceStartMetronome=startM;
+window.forceStopMetronome=stopM;
+window.setBPM=v=>{
+  bpm=parseInt(v);
+  bpmSlider.value=bpm;
+  bpmVal.textContent=bpm;
+  if(run) restart();
 };
 </script>
 
