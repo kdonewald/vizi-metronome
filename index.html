@@ -136,7 +136,17 @@ window.setBPM=v=>{
   bpmVal.textContent=bpm;
   if(run) restart();
 };
+
+/* ===== HARD STOP FAILSAFE FOR MIT APP INVENTOR ===== */
+window.forceHardStop = () => {
+  try { stopM(); } catch(e) {}
+  try { if (ctx) { ctx.close(); ctx = null; } } catch(e) {}
+  try { clearInterval(timer); timer = null; } catch(e) {}
+  run = false;
+};
+
 </script>
 
 </body>
 </html>
+
